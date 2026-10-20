@@ -1,0 +1,173 @@
+%% Set Up
+
+% Suppress warning messages
+warning off
+
+% Modify to reflect name of file where data is (replace data_folder)
+data_dir = "data/ew106_04_29_2026/";
+data_dir2 = "data/ew105_4_22_26/";
+
+% Load transfer functions
+tfs = load('common_tfs_new.mat').tfs;
+
+% Assign channels:
+% Ch1: Reference Microphone ("probe"), units of pressure (Pa)
+% Ch2: UmboMic ("cant"), units of charge (C)
+% Ch3: Laser Doppler Vibrometer ("ldv"), units of velocity (m/s)
+% Ch4: Crown amplifier ("amp"), units of volts (V)
+names = {'probe', 'cant', 'ldv', 'amp'};
+units = {'Pa', 'C', 'm/s', 'V'};
+
+% Assign channel transfer functions (TF)
+% If Ch1 ref mic is set to 20dB, use logain. If set to 40dB, use higain.
+higain = {1/(100*tfs.cal_10_31_25), 1/tfs.higain, 0.002, 1};
+logain = {1/(10*tfs.cal_10_31_25), 1/tfs.higain, 0.002, 1};
+
+% Define s as complex frequency domain
+clear s;
+s = tf('s');
+
+%% Load Data
+
+% Example loading 4 channel data
+data1 = pxi_to_frd(data_dir+"f1260.txt",names,units,higain);
+data2 = pxi_to_frd(data_dir+"f1344.txt",names,units,higain);
+
+% Example loading noise data
+data1_nf1 = pxi_wvf_noise(data_dir2+'f1431wvf.txt',0,10)/tfs.higain;
+data1_nf1 = third_octave_normalize(data1_nf1);
+
+%% Plot UmboMic Output re Displacement (Bench or cadaveric)
+% Compensate for LDV delay
+f = data1.Frequency;
+tau = 0.045e-3;
+H_delay = frd(exp(-1j*2*pi*f*tau), f, 'FrequencyUnit', 'Hz');
+
+figure(1);
+clf;
+t = tiledlayout(3,1);
+nexttile([2,1]);
+
+data1_s = H_delay*(data1('cant')*s/data1('ldv'));
+data2_s = H_delay*(data2('cant')*s/data2('ldv'));
+
+% Plot Magnitude
+loglog_pxi_frd(data1_s, 1, 1e6, 'Linewidth', 4);
+loglog_pxi_frd(data2_s, 1, 1e6, 'Linewidth', 4);
+
+legend('Shrew 1', 'Shrew 2')
+xlabel('Frequency [kHz]')
+ylabel('Charge re Displacement [fC/nm]')
+xlim([100, 10e3])
+ylim([1e-1,1e1]) % Change if needed
+title('Sensitivity')
+
+% Plot Phase
+nexttile([1,1])
+data1_s_p = -pi+angle(data1_s.ResponseData(:));
+semilogx(f(f >= 100), unwrap(data1_s_p(f >= 100)),'Linewidth', 4);
+hold on;
+
+grid on;
+xlim([100,1e4])
+% ylim([-10,0])
+xlabel('Frequency [Hz]')
+ylabel('Phase [degrees]')
+
+improvePlot(900,600); % Changes plot dimensions
+fontsize(20,"points")
+
+
+
+%% Plot Noisefloors
+figure(2);
+clf;
+
+loglog_pxi_frd(data1_nf1, 1, 1e15,'Linewidth', 3);
+
+xlabel('Frequency [kHz]')
+ylabel('Charge [fC]')
+xlim([100, 10e3])
+title('Noisefloor')
+
+improvePlot(900,600); % Changes plot dimensions
+fontsize(20,"points")
+
+%% Plot UmboMic Output re Ear Canal Pressure (cadaveric)
+figure(3)
+clf
+t = tiledlayout(3,1);
+nexttile([2,1])
+
+data1_sec = data1('cant')/data1('probe');
+data2_sec = data2('cant')/data2('probe');
+
+loglog_pxi_frd(data1_sec, 1, 1e15, 'Linewidth', 4);
+loglog_pxi_frd(data2_sec, 1, 1e15, 'Linewidth', 4);
+
+xlim([100, 10e3])
+% ylim([1,100])
+title('Sensitivity')
+xlabel('Frequency [Hz]')
+ylabel('Charge re EC Pressure [fC/Pa]')
+
+nexttile([1,1])
+data1_sec_p = -pi+angle(data1_sec.ResponseData(:));
+semilogx(f(f >= 100), 360+unwrap(data1_sec_p(f >= 100))*180/pi,'Linewidth', 4);
+hold on;
+data2_sec_p = -pi+angle(data2_sec.ResponseData(:));
+semilogx(f(f >= 100), 360+unwrap(data2_sec_p(f >= 100))*180/pi,'Linewidth', 4);
+hold on;
+
+grid on;
+xlim([100,1e4])
+% ylim([-10,0])
+xlabel('Frequency [Hz]')
+ylabel('Phase [degrees]')
+
+improvePlot(900,600); % Changes plot dimensions
+fontsize(20,"points")
+
+
+
+%% Plot Umbo Displacement re Ear Canal Pressure (cadaveric)
+% Compensate for LDV delay
+f = data1.Frequency;
+tau = 0.045e-3;
+H_delay = frd(exp(-1j*2*pi*f*tau), f, 'FrequencyUnit', 'Hz');
+
+figure(4)
+clf;
+t = tiledlayout(3,1);
+nexttile([2,1]);
+
+data1_u = data1('ldv')/(H_delay*s*data1('probe'));
+data2_u = data2('ldv')/(H_delay*s*data2('probe'));
+
+loglog_pxi_frd(data1_u, 1, 1e9, 'Linewidth', 4);
+loglog_pxi_frd(data2_u, 1, 1e9, 'Linewidth', 4);
+
+xlim([100, 10e3])
+% ylim([0.1,100])
+title('Umbo Displacement')
+xlabel('Frequency [Hz]')
+ylabel('Displacement re EC Pressure [nm/Pa]')
+
+% Plot Phase
+nexttile([1,1])
+data1_u_p = -pi+angle(data1_u.ResponseData(:));
+semilogx(f(f >= 100), unwrap(data1_u_p(f >= 100)),'Linewidth', 4);
+hold on;
+
+data2_u_p = -pi+angle(data2_u.ResponseData(:));
+semilogx(f(f >= 100), unwrap(data2_u_p(f >= 100)),'Linewidth', 4);
+hold on;
+
+grid on;
+xlim([100,1e4])
+% ylim([-10,0])
+xlabel('Frequency [Hz]')
+ylabel('Phase [degrees]')
+
+improvePlot(900,600); % Changes plot dimensions
+fontsize(20,"points")
