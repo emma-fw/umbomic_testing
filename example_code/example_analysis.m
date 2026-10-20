@@ -41,16 +41,16 @@ data1_nf1 = third_octave_normalize(data1_nf1);
 %% Plot UmboMic Output re Displacement (Bench or cadaveric)
 % Compensate for LDV delay
 f = data1.Frequency;
-% tau = 0.045e-3;
-% H_delay = frd(exp(-1j*2*pi*f*tau), f, 'FrequencyUnit', 'Hz');
+tau = 0.045e-3;
+H_delay = frd(exp(-1j*2*pi*f*tau), f, 'FrequencyUnit', 'Hz');
 
 figure(1);
 clf;
 t = tiledlayout(3,1);
 nexttile([2,1]);
 
-data1_s =(data1('cant')*s/data1('ldv'));
-data2_s =(data2('cant')*s/data2('ldv'));
+data1_s = (H_delay*data1('cant')*s)/data1('ldv');
+data2_s = (H_delay*data2('cant')*s)/data2('ldv');
 
 % Plot Magnitude
 loglog_pxi_frd(data1_s, 1, 1e6, 'Linewidth', 4);
@@ -60,15 +60,19 @@ legend('Shrew 1', 'Shrew 2')
 xlabel('Frequency [kHz]')
 ylabel('Charge re Displacement [nm/Pa]')
 xlim([100, 10e3])
-ylim([1e-1,1e1]) % Change if needed
+% ylim([1e-1,1e1]) % Change if needed
 title('Sensitivity')
 
 % Plot Phase
 nexttile([1,1])
 
-data1_s_p = -pi+angle(data1_s.ResponseData(:));
-semilogx(f, 360+unwrap(data1_s_p)*180/pi,'Linewidth', 4);
+data1_s_p = angle(data1_s.ResponseData(:));
+semilogx(f(f >= 100), unwrap(data1_s_p(f >= 100))*180/pi,'Linewidth', 4);
 hold on;
+data2_s_p = angle(data2_s.ResponseData(:));
+semilogx(f(f >= 100), unwrap(data2_s_p(f >= 100))*180/pi,'Linewidth', 4);
+hold on;
+
 
 grid on;
 xlim([100,1e4])
@@ -114,11 +118,11 @@ xlabel('Frequency [Hz]')
 ylabel('Charge re EC Pressure [fC/Pa]')
 
 nexttile([1,1])
-data1_sec_p = -pi+angle(data1_sec.ResponseData(:));
-semilogx(f(f >= 100), 360+unwrap(data1_sec_p(f >= 100))*180/pi,'Linewidth', 4);
+data1_sec_p = angle(data1_sec.ResponseData(:));
+semilogx(f(f >= 100), unwrap(data1_sec_p(f >= 100))*180/pi,'Linewidth', 4);
 hold on;
-data2_sec_p = -pi+angle(data2_sec.ResponseData(:));
-semilogx(f(f >= 100), 360+unwrap(data2_sec_p(f >= 100))*180/pi,'Linewidth', 4);
+data2_sec_p = angle(data2_sec.ResponseData(:));
+semilogx(f(f >= 100), unwrap(data2_sec_p(f >= 100))*180/pi,'Linewidth', 4);
 hold on;
 
 grid on;
@@ -157,11 +161,11 @@ ylabel('Displacement re EC Pressure [nm/Pa]')
 
 % Plot Phase
 nexttile([1,1])
-data1_u_p = -pi+angle(data1_u.ResponseData(:));
+data1_u_p = angle(data1_u.ResponseData(:));
 semilogx(f(f >= 100), unwrap(data1_u_p(f >= 100))*180/pi,'Linewidth', 4);
 hold on;
 
-data2_u_p = -pi+angle(data2_u.ResponseData(:));
+data2_u_p = angle(data2_u.ResponseData(:));
 semilogx(f(f >= 100), unwrap(data2_u_p(f >= 100))*180/pi,'Linewidth', 4);
 hold on;
 
