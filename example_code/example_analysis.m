@@ -3,6 +3,7 @@
 % Suppress warning messages
 warning off
 
+
 % Modify to reflect name of file where data is (replace data_folder)
 data_dir = "data/ew106_04_29_2026/";
 data_dir2 = "data/ew105_4_22_26/";
@@ -30,42 +31,43 @@ s = tf('s');
 %% Load Data
 
 % Example loading 4 channel data
-data1 = pxi_to_frd(data_dir+"f1260.txt",names,units,higain);
-data2 = pxi_to_frd(data_dir+"f1344.txt",names,units,higain);
+data1 = pxi_to_frd(data_dir+"f1260.txt", names, units, higain);
+data2 = pxi_to_frd(data_dir+"f1344.txt", names, units, higain);
 
 % Example loading noise data
-data1_nf1 = pxi_wvf_noise(data_dir2+'f1431wvf.txt',0,10)/tfs.higain;
-data1_nf1 = third_octave_normalize(data1_nf1);
+% data1_nf1 = pxi_wvf_noise(data_dir2+'f1431wvf.txt',0,10)/tfs.higain;
+% data1_nf1 = third_octave_normalize(data1_nf1);
 
 %% Plot UmboMic Output re Displacement (Bench or cadaveric)
 % Compensate for LDV delay
 f = data1.Frequency;
-tau = 0.045e-3;
-H_delay = frd(exp(-1j*2*pi*f*tau), f, 'FrequencyUnit', 'Hz');
+% tau = 0.045e-3;
+% H_delay = frd(exp(-1j*2*pi*f*tau), f, 'FrequencyUnit', 'Hz');
 
 figure(1);
 clf;
 t = tiledlayout(3,1);
 nexttile([2,1]);
 
-data1_s = H_delay*(data1('cant')*s/data1('ldv'));
-data2_s = H_delay*(data2('cant')*s/data2('ldv'));
+data1_s =(data1('ldv')/(s*data1('probe')));
+% data2_s =(data2('cant')*s/data2('ldv'));
 
 % Plot Magnitude
-loglog_pxi_frd(data1_s, 1, 1e6, 'Linewidth', 4);
-loglog_pxi_frd(data2_s, 1, 1e6, 'Linewidth', 4);
+loglog_pxi_frd(data1_s, 1, 1e9, 'Linewidth', 4);
+% loglog_pxi_frd(data2_s, 1, 1e6, 'Linewidth', 4);
 
 legend('Shrew 1', 'Shrew 2')
 xlabel('Frequency [kHz]')
-ylabel('Charge re Displacement [fC/nm]')
-xlim([100, 10e3])
-ylim([1e-1,1e1]) % Change if needed
+ylabel('Charge re Displacement [nm/Pa]')
+% xlim([100, 10e3])
+% ylim([1e-1,1e1]) % Change if needed
 title('Sensitivity')
 
 % Plot Phase
 nexttile([1,1])
-data1_s_p = -pi+angle(data1_s.ResponseData(:));
-semilogx(f(f >= 100), unwrap(data1_s_p(f >= 100)),'Linewidth', 4);
+
+data1_s_p = angle(data1_s.ResponseData(:));
+semilogx(f, unwrap(data1_s_p),'Linewidth', 4);
 hold on;
 
 grid on;
